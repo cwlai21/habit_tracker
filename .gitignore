@@ -1,0 +1,5 @@
+node_modules/
+habits.db
+habits.db-shm
+habits.db-wal
+backups/
