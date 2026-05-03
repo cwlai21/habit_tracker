@@ -454,6 +454,69 @@ async function goToMonth(year, month) {
   state.year = year; state.month = month;
   await loadMonth();
   renderHeatmap();
+  if (document.getElementById('notes-panel').style.display !== 'none') renderNotesPanel();
+}
+
+// ---- Admin notes ----
+function isAdmin() { return sessionStorage.getItem('habitAdmin') === '1'; }
+
+function openNotesPanel() {
+  if (isAdmin()) { showNotesPanel(); return; }
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-error').style.display = 'none';
+  document.getElementById('pin-modal').classList.add('open');
+  setTimeout(() => document.getElementById('pin-input').focus(), 50);
+}
+
+function submitPin() {
+  if (document.getElementById('pin-input').value === ADMIN_PIN) {
+    sessionStorage.setItem('habitAdmin', '1');
+    document.getElementById('pin-modal').classList.remove('open');
+    showNotesPanel();
+  } else {
+    document.getElementById('pin-error').style.display = 'block';
+    document.getElementById('pin-input').value = '';
+    document.getElementById('pin-input').focus();
+  }
+}
+
+function showNotesPanel() {
+  renderNotesPanel();
+  document.getElementById('notes-panel').style.display = 'block';
+  document.getElementById('btn-view-notes').style.display = 'none';
+  document.getElementById('btn-lock-notes').style.display = 'inline-block';
+}
+
+function lockNotes() {
+  sessionStorage.removeItem('habitAdmin');
+  document.getElementById('notes-panel').style.display = 'none';
+  document.getElementById('btn-view-notes').style.display = 'inline-block';
+  document.getElementById('btn-lock-notes').style.display = 'none';
+}
+
+function renderNotesPanel() {
+  const { year, month, remarks } = state;
+  document.getElementById('notes-panel-title').textContent =
+    `${MONTH_NAMES[month - 1]} ${year} — Notes`;
+
+  const entries = Object.entries(remarks)
+    .filter(([, r]) => r.trim())
+    .sort(([a], [b]) => b.localeCompare(a)); // descending by date
+
+  const list = document.getElementById('notes-panel-list');
+  if (entries.length === 0) {
+    list.innerHTML = '<div class="notes-empty">No notes recorded this month.</div>';
+    return;
+  }
+  list.innerHTML = entries.map(([date, remark]) => {
+    const d = new Date(date + 'T00:00:00');
+    const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const safe  = remark.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<div class="note-entry">
+      <div class="note-entry-date">${label}</div>
+      <div class="note-entry-text">${safe}</div>
+    </div>`;
+  }).join('');
 }
 
 // ---- Init ----
@@ -486,6 +549,17 @@ async function init() {
   document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
     backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.classList.remove('open'); });
   });
+
+  // Notes panel & PIN
+  document.getElementById('btn-view-notes').addEventListener('click', openNotesPanel);
+  document.getElementById('btn-lock-notes').addEventListener('click', lockNotes);
+  document.getElementById('btn-submit-pin').addEventListener('click', submitPin);
+  document.getElementById('btn-cancel-pin').addEventListener('click', () => document.getElementById('pin-modal').classList.remove('open'));
+  document.getElementById('btn-close-pin').addEventListener('click', () => document.getElementById('pin-modal').classList.remove('open'));
+  document.getElementById('pin-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitPin(); });
+
+  // Restore notes panel if already authenticated this session
+  if (isAdmin()) showNotesPanel();
 }
 
 init();

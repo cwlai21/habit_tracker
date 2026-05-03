@@ -19,6 +19,7 @@
   --radius: 6px;
   --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
   --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+  --header-h: 57px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -207,9 +208,12 @@ main {
 
 /* Corner cell */
 .corner {
+  position: sticky;
+  top: var(--header-h);
+  left: 0;
   min-width: var(--name-col-width);
   background: var(--surface);
-  z-index: 2;
+  z-index: 4;
 }
 
 /* Habit name column */
@@ -270,7 +274,10 @@ th.day-header {
   user-select: none;
   border-bottom: 1px solid var(--border);
   vertical-align: bottom;
-  position: relative;
+  position: sticky;
+  top: var(--header-h);
+  z-index: 3;
+  background: var(--surface);
   transition: background 0.12s;
 }
 th.day-header:hover { background: var(--primary-light); }
@@ -601,11 +608,86 @@ input[type="text"]:focus { outline: none; border-color: var(--primary); backgrou
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-light); }
 
+/* ---- Notes panel ---- */
+.notes-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.btn-notes {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-notes:hover { background: var(--bg); color: var(--text); border-color: var(--text-muted); }
+.btn-notes.unlock { color: var(--primary); border-color: var(--primary); }
+
+#notes-panel {
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  margin-top: 0.75rem;
+  overflow: hidden;
+}
+
+.notes-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.notes-panel-header h3 { font-size: 0.9rem; font-weight: 600; color: var(--text); }
+
+.note-entry {
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 0.75rem;
+  align-items: start;
+}
+.note-entry:last-child { border-bottom: none; }
+.note-entry-date {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary);
+  padding-top: 0.1rem;
+}
+.note-entry-text {
+  font-size: 0.88rem;
+  color: var(--text);
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.notes-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* PIN modal input */
+#pin-input {
+  letter-spacing: 0.2em;
+  font-size: 1.1rem;
+  text-align: center;
+}
+#pin-error { margin-top: 0.4rem; color: var(--danger); font-size: 0.8rem; display: none; }
+
 /* ---- Responsive ---- */
 @media (max-width: 600px) {
   header { padding: 0.6rem 1rem; }
   .app-title { font-size: 0.95rem; }
   .month-label { font-size: 0.9rem; min-width: 130px; }
   main { padding: 1rem 0.75rem; }
-  :root { --name-col-width: 120px; --cell-size: 28px; }
+  :root { --name-col-width: 120px; --cell-size: 28px; --header-h: 52px; }
+  .note-entry { grid-template-columns: 1fr; gap: 0.25rem; }
 }
