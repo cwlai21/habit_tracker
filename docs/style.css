@@ -209,7 +209,6 @@ main {
 /* Corner cell */
 .corner {
   position: sticky;
-  top: var(--header-h);
   left: 0;
   min-width: var(--name-col-width);
   background: var(--surface);
@@ -274,11 +273,16 @@ th.day-header {
   user-select: none;
   border-bottom: 1px solid var(--border);
   vertical-align: bottom;
-  position: sticky;
-  top: var(--header-h);
+  position: relative;
   z-index: 3;
   background: var(--surface);
   transition: background 0.12s;
+}
+
+/* thead stacks above tbody when JS translates it for sticky effect */
+#heatmap-table thead {
+  position: relative;
+  z-index: 5;
 }
 th.day-header:hover { background: var(--primary-light); }
 th.day-header.today { background: var(--today-col); }

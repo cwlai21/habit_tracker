@@ -519,6 +519,23 @@ function renderNotesPanel() {
   }).join('');
 }
 
+// ---- Sticky date header (JS-based because overflow-x:auto on .heatmap-scroll
+//      prevents CSS position:sticky from working relative to the viewport) ----
+function initStickyDateHeader() {
+  let ticking = false;
+  function update() {
+    const wrapper = document.querySelector('.heatmap-wrapper');
+    const thead   = document.querySelector('#heatmap-table thead');
+    ticking = false;
+    if (!wrapper || !thead) return;
+    const hdrH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 57;
+    const top  = wrapper.getBoundingClientRect().top;
+    thead.style.transform = top < hdrH ? `translateY(${hdrH - top}px)` : '';
+  }
+  window.addEventListener('scroll', () => { if (!ticking) { requestAnimationFrame(update); ticking = true; } }, { passive: true });
+  window.addEventListener('resize', update, { passive: true });
+}
+
 // ---- Init ----
 async function init() {
   await Promise.all([loadHabits(), loadMonth()]);
@@ -563,3 +580,4 @@ async function init() {
 }
 
 init();
+initStickyDateHeader();
