@@ -192,7 +192,7 @@ main {
   background: var(--surface);
   border-radius: 10px;
   box-shadow: var(--shadow-md);
-  overflow: hidden;
+  /* overflow:hidden removed — it was trapping sticky thead inside the container */
 }
 
 .heatmap-scroll {
