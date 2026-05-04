@@ -342,6 +342,14 @@ td.log-cell.done::after { background: var(--cell-done, var(--done-bg)); }
 td.log-cell.done:hover::after { background: var(--cell-done-hover, var(--done-hover)); }
 td.log-cell.today { background: var(--today-col); }
 td.log-cell.weekend { background: var(--weekend-col); }
+td.log-cell.future, .note-cell.future, th.day-header.future {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+td.log-cell.future::after { background: var(--border) !important; transform: none !important; }
+td.log-cell.future:hover::after { background: var(--border) !important; transform: none !important; }
+.note-cell.future:hover { background: inherit; }
+th.day-header.future:hover { background: var(--surface); }
 
 tbody tr:hover { background: #fafafa; }
 tbody tr:hover td.log-cell.today { background: var(--today-col); }

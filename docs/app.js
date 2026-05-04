@@ -158,6 +158,7 @@ function renderHeatmap() {
   const today     = new Date();
   const isCurMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
   const todayDay  = today.getDate();
+  const todayStr  = fmtDate(today.getFullYear(), today.getMonth() + 1, todayDay);
 
   document.getElementById('month-display').textContent = `${MONTH_NAMES[month - 1]} ${year}`;
   renderStatsBar();
@@ -180,15 +181,17 @@ function renderHeatmap() {
     const dow  = new Date(year, month - 1, d).getDay();
     const isToday = isCurMonth && d === todayDay;
 
+    const isFutureDay = date > todayStr;
     const th = document.createElement('th');
     th.className = 'day-header';
-    if (isToday) th.classList.add('today');
+    if (isToday)   th.classList.add('today');
+    if (isFutureDay) th.classList.add('future');
     if (dow === 0 || dow === 6) th.classList.add('weekend');
     th.innerHTML =
       `<span class="day-num">${d}</span>` +
       `<span class="day-abbr">${DAY_ABBR[dow]}</span>` +
       (remarks[date] ? '<span class="remark-dot"></span>' : '<span style="display:block;height:6px"></span>');
-    th.addEventListener('click', () => openDayModal(date));
+    if (!isFutureDay) th.addEventListener('click', () => openDayModal(date));
     headerRow.appendChild(th);
   }
   thead.appendChild(headerRow);
@@ -251,17 +254,19 @@ function renderHeatmap() {
         tr.appendChild(nameTd);
 
         for (let d = 1; d <= days; d++) {
-          const date    = fmtDate(year, month, d);
-          const dow     = new Date(year, month - 1, d).getDay();
-          const isToday = isCurMonth && d === todayDay;
-          const done    = logs.has(`${habit.id}-${date}`);
+          const date      = fmtDate(year, month, d);
+          const dow       = new Date(year, month - 1, d).getDay();
+          const isToday   = isCurMonth && d === todayDay;
+          const isFuture  = date > todayStr;
+          const done      = logs.has(`${habit.id}-${date}`);
 
           const td = document.createElement('td');
           td.className = 'log-cell';
-          if (done)    td.classList.add('done');
-          if (isToday) td.classList.add('today');
+          if (done)     td.classList.add('done');
+          if (isToday)  td.classList.add('today');
+          if (isFuture) td.classList.add('future');
           if (dow === 0 || dow === 6) td.classList.add('weekend');
-          td.addEventListener('click', () => toggleLog(habit.id, date, td));
+          if (!isFuture) td.addEventListener('click', () => toggleLog(habit.id, date, td));
           tr.appendChild(td);
         }
         tbody.appendChild(tr);
@@ -277,15 +282,17 @@ function renderHeatmap() {
   notesLabel.textContent = 'Notes';
   notesTr.appendChild(notesLabel);
   for (let d = 1; d <= days; d++) {
-    const date    = fmtDate(year, month, d);
-    const dow     = new Date(year, month - 1, d).getDay();
-    const isToday = isCurMonth && d === todayDay;
+    const date     = fmtDate(year, month, d);
+    const dow      = new Date(year, month - 1, d).getDay();
+    const isToday  = isCurMonth && d === todayDay;
+    const isFuture = date > todayStr;
     const td = document.createElement('td');
     td.className = 'note-cell';
     if (remarks[date]) { td.classList.add('has-note'); td.title = remarks[date]; }
-    if (isToday) td.classList.add('today');
+    if (isToday)  td.classList.add('today');
+    if (isFuture) td.classList.add('future');
     if (dow === 0 || dow === 6) td.classList.add('weekend');
-    td.addEventListener('click', () => openDayModal(date));
+    if (!isFuture) td.addEventListener('click', () => openDayModal(date));
     notesTr.appendChild(td);
   }
   tbody.appendChild(notesTr);
