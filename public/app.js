@@ -306,15 +306,13 @@ function renderHeatmap() {
   tbody.appendChild(notesTr);
   table.appendChild(tbody);
 
-  // Dynamically set column width based on longest habit name
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  ctx.font = '500 14px system-ui, -apple-system, sans-serif';
-  const names = activeHabits.map(h => h.name).concat(['Habit', 'Notes']);
-  const maxTextWidth = Math.max(...names.map(n => ctx.measureText(n).width));
-  // Add padding (left + right) + space for pct badge (~36px)
-  const colWidth = Math.ceil(maxTextWidth) + 16 + 36;
-  document.documentElement.style.setProperty('--name-col-width', `${colWidth}px`);
+  // Sync --name-col-width to the actual rendered column width (for corner header)
+  requestAnimationFrame(() => {
+    const firstCell = document.querySelector('tbody .habit-name-cell');
+    if (firstCell) {
+      document.documentElement.style.setProperty('--name-col-width', `${firstCell.offsetWidth}px`);
+    }
+  });
 }
 
 // ---- Toggle log ----

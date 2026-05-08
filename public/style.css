@@ -220,7 +220,6 @@ main {
   z-index: 1;
   padding: 0 0.75rem;
   min-width: var(--name-col-width);
-  max-width: var(--name-col-width);
   font-weight: 500;
   color: var(--text);
   border-right: 2px solid var(--border);
