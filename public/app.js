@@ -306,12 +306,25 @@ function renderHeatmap() {
   tbody.appendChild(notesTr);
   table.appendChild(tbody);
 
-  // Sync --name-col-width to the actual rendered column width (for corner header)
+  // Measure the widest habit name text and set --name-col-width accordingly
   requestAnimationFrame(() => {
-    const firstCell = document.querySelector('tbody .habit-name-cell');
-    if (firstCell) {
-      document.documentElement.style.setProperty('--name-col-width', `${firstCell.offsetWidth}px`);
-    }
+    const sampleText = document.querySelector('.habit-name-text');
+    if (!sampleText) return;
+
+    const measurer = document.createElement('span');
+    measurer.style.cssText = `position:absolute;visibility:hidden;white-space:nowrap;font:${getComputedStyle(sampleText).font};`;
+    document.body.appendChild(measurer);
+
+    let maxTextWidth = 0;
+    document.querySelectorAll('.habit-name-text').forEach(el => {
+      measurer.textContent = el.textContent;
+      maxTextWidth = Math.max(maxTextWidth, measurer.offsetWidth);
+    });
+    document.body.removeChild(measurer);
+
+    // padding (0.75rem × 2 ≈ 24px) + gap (0.3rem ≈ 5px) + pct badge (≈36px) + breathing room (12px)
+    const colWidth = maxTextWidth + 24 + 5 + 36 + 12;
+    document.documentElement.style.setProperty('--name-col-width', `${colWidth}px`);
   });
 }
 
