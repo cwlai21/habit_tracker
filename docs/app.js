@@ -106,6 +106,28 @@ function calcOverallStats(logsSet, habits, year, month) {
   return { done, total, pct: Math.round(done / total * 100) };
 }
 
+function calcCategoryStats(logsSet, habits, year, month) {
+  const days = countableDays(year, month);
+  if (!days) return {};
+  const active = habits.filter(h => h.active);
+  const result = {};
+  const seen = new Set();
+  for (const h of active) {
+    const cat = h.category || '';
+    if (seen.has(cat)) continue;
+    seen.add(cat);
+    const catHabits = active.filter(a => (a.category || '') === cat);
+    let done = 0;
+    for (let d = 1; d <= days; d++) {
+      const date = fmtDate(year, month, d);
+      catHabits.forEach(a => { if (logsSet.has(`${a.id}-${date}`)) done++; });
+    }
+    const total = catHabits.length * days;
+    result[cat] = { done, total, pct: total > 0 ? Math.round(done / total * 100) : 0 };
+  }
+  return result;
+}
+
 function calcHabitPct(habitId, logsSet, year, month) {
   const days = countableDays(year, month);
   if (!days) return null;
@@ -148,6 +170,49 @@ function renderStatsBar() {
       `<span class="stat-value ${cls}">${arrow} ${sign}${delta}%</span>` +
       `<span class="stat-sub">last month was ${prev.pct}%</span>`;
     bar.appendChild(prevCard);
+  }
+
+  // Category comparison cards
+  const curCatStats  = calcCategoryStats(logs, habits, year, month);
+  const prevCatStats = calcCategoryStats(prevLogs, habits, prevYear, prevMonth);
+
+  const seenCats = new Set();
+  const orderedCats = [];
+  for (const h of habits.filter(h => h.active)) {
+    const cat = h.category || '';
+    if (!seenCats.has(cat)) { seenCats.add(cat); orderedCats.push(cat); }
+  }
+
+  for (const cat of orderedCats) {
+    if (!cat) continue;
+    const curStat  = curCatStats[cat];
+    const prevStat = prevCatStats[cat];
+    if (!curStat) continue;
+
+    const color = categoryColor(cat);
+    const catCard = document.createElement('div');
+    catCard.className = 'stat-card stat-card-cat';
+    if (color) catCard.style.borderTop = `3px solid ${color.done}`;
+
+    let deltaHtml = '';
+    if (prevStat && prevStat.total > 0) {
+      const delta = curStat.pct - prevStat.pct;
+      const sign  = delta >= 0 ? '+' : '';
+      const cls   = delta > 0 ? 'trend-up' : delta < 0 ? 'trend-down' : 'trend-flat';
+      const arrow = delta > 0 ? '↑' : delta < 0 ? '↓' : '→';
+      deltaHtml = `<span class="stat-cat-delta ${cls}">${arrow} ${sign}${delta}%</span>`;
+    }
+
+    const prevPctLabel = (prevStat && prevStat.total > 0) ? `${prevStat.pct}%` : 'N/A';
+    catCard.innerHTML =
+      `<span class="stat-label" style="${color ? `color:${color.label}` : ''}">${cat}</span>` +
+      `<div class="stat-cat-row">` +
+        `<span class="stat-cat-pct" style="${color ? `color:${color.done}` : ''}">${curStat.pct}%</span>` +
+        deltaHtml +
+      `</div>` +
+      `<span class="stat-sub">vs ${MONTH_NAMES[prevMonth - 1]}: ${prevPctLabel}</span>`;
+
+    bar.appendChild(catCard);
   }
 }
 
