@@ -186,6 +186,32 @@ main {
   color: var(--text-muted);
 }
 
+.stat-card-cat {
+  min-width: 110px;
+  border-top: 3px solid var(--border);
+}
+
+.stat-cat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.stat-cat-pct {
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.stat-cat-delta {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.stat-cat-delta.trend-up   { color: #16a34a; }
+.stat-cat-delta.trend-down { color: var(--danger); }
+.stat-cat-delta.trend-flat { color: var(--text-muted); }
+
 /* ---- Heatmap ---- */
 .heatmap-wrapper {
   background: var(--surface);
