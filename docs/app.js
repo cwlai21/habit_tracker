@@ -71,7 +71,7 @@ async function loadMonth() {
   state.remarks = {};
   (remarksRes.data || []).forEach(r => { state.remarks[r.date] = r.remark; });
   state.weeklyReflections = {};
-  (weeklyRes.data || []).forEach(r => { state.weeklyReflections[r.week_date] = r.reflection; });
+  (weeklyRes.data || []).forEach(r => { state.weeklyReflections[`${r.week_date}|${r.category}`] = r.reflection; });
   state.prevLogs = new Set((prevLogsRes.data || []).map(l => `${l.habit_id}-${l.date}`));
 }
 
@@ -277,14 +277,13 @@ function renderHeatmap() {
 
     if (dow === 0) {
       const wn = weekOfYear(year, month, d);
-      const hasRef = !!weeklyReflections[date];
+      const hasAnyRef = Object.keys(weeklyReflections).some(k => k.startsWith(date + '|'));
       const weekTh = document.createElement('th');
       weekTh.className = 'week-col-header';
       weekTh.innerHTML =
         `<span class="day-num">W${wn}</span>` +
         `<span class="day-abbr"></span>` +
-        (hasRef ? '<span class="remark-dot"></span>' : '<span style="display:block;height:6px"></span>');
-      weekTh.addEventListener('click', () => openWeekModal(date));
+        (hasAnyRef ? '<span class="remark-dot"></span>' : '<span style="display:block;height:6px"></span>');
       headerRow.appendChild(weekTh);
     }
   }
@@ -330,7 +329,7 @@ function renderHeatmap() {
         tbody.appendChild(catTr);
       }
 
-      catHabits.forEach(habit => {
+      catHabits.forEach((habit, catIdx) => {
         const tr = document.createElement('tr');
         if (color) {
           tr.style.setProperty('--cell-done',       color.done);
@@ -363,10 +362,15 @@ function renderHeatmap() {
           if (!isFuture) td.addEventListener('click', () => toggleLog(habit.id, date, td));
           tr.appendChild(td);
 
-          if (dow === 0) {
+          if (dow === 0 && catIdx === 0) {
+            const key = `${date}|${cat}`;
+            const hasRef = !!weeklyReflections[key];
             const weekTd = document.createElement('td');
-            weekTd.className = 'week-col-cell';
+            weekTd.rowSpan = catHabits.length;
+            weekTd.className = 'cat-week-cell';
+            if (hasRef) weekTd.classList.add('has-note');
             if (color) weekTd.style.background = color.row;
+            weekTd.addEventListener('click', () => openWeekModal(date, cat));
             tr.appendChild(weekTd);
           }
         }
@@ -398,12 +402,7 @@ function renderHeatmap() {
 
     if (dow === 0) {
       const weekNoteTd = document.createElement('td');
-      weekNoteTd.className = 'week-col-note';
-      if (weeklyReflections[date]) {
-        weekNoteTd.classList.add('has-note');
-        weekNoteTd.title = weeklyReflections[date];
-      }
-      weekNoteTd.addEventListener('click', () => openWeekModal(date));
+      weekNoteTd.className = 'week-col-cell';
       notesTr.appendChild(weekNoteTd);
     }
   }

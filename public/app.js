@@ -61,7 +61,7 @@ async function loadMonth() {
   state.remarks = {};
   cur.remarks.forEach(r => { state.remarks[r.date] = r.remark; });
   state.weeklyReflections = {};
-  cur.weeklyReflections.forEach(r => { state.weeklyReflections[r.week_date] = r.reflection; });
+  cur.weeklyReflections.forEach(r => { state.weeklyReflections[`${r.week_date}|${r.category}`] = r.reflection; });
 
   state.prevLogs = new Set(prev.logs.map(l => `${l.habit_id}-${l.date}`));
 }
@@ -271,17 +271,16 @@ function renderHeatmap() {
     th.addEventListener('click', () => openDayModal(date));
     headerRow.appendChild(th);
 
-    // Week reflection column after every Sunday
+    // Week column header after every Sunday
     if (dow === 0) {
       const wn = weekOfYear(year, month, d);
-      const hasRef = !!weeklyReflections[date];
+      const hasAnyRef = Object.keys(weeklyReflections).some(k => k.startsWith(date + '|'));
       const weekTh = document.createElement('th');
       weekTh.className = 'week-col-header';
       weekTh.innerHTML =
         `<span class="day-num">W${wn}</span>` +
         `<span class="day-abbr"></span>` +
-        (hasRef ? '<span class="remark-dot"></span>' : '<span style="display:block;height:6px"></span>');
-      weekTh.addEventListener('click', () => openWeekModal(date));
+        (hasAnyRef ? '<span class="remark-dot"></span>' : '<span style="display:block;height:6px"></span>');
       headerRow.appendChild(weekTh);
     }
   }
@@ -333,7 +332,7 @@ function renderHeatmap() {
       }
 
       // Habit rows
-      catHabits.forEach(habit => {
+      catHabits.forEach((habit, catIdx) => {
         const tr = document.createElement('tr');
         if (color) {
           tr.style.setProperty('--cell-done', color.done);
@@ -367,11 +366,16 @@ function renderHeatmap() {
           td.addEventListener('click', () => toggleLog(habit.id, date, td));
           tr.appendChild(td);
 
-          // Week separator cell after every Sunday
-          if (dow === 0) {
+          // Per-category weekly reflection cell (rowspan across all habits in this category)
+          if (dow === 0 && catIdx === 0) {
+            const key = `${date}|${cat}`;
+            const hasRef = !!weeklyReflections[key];
             const weekTd = document.createElement('td');
-            weekTd.className = 'week-col-cell';
+            weekTd.rowSpan = catHabits.length;
+            weekTd.className = 'cat-week-cell';
+            if (hasRef) weekTd.classList.add('has-note');
             if (color) weekTd.style.background = color.row;
+            weekTd.addEventListener('click', () => openWeekModal(date, cat));
             tr.appendChild(weekTd);
           }
         }
@@ -405,15 +409,10 @@ function renderHeatmap() {
     td.addEventListener('click', () => openDayModal(date));
     notesTr.appendChild(td);
 
-    // Weekly reflection note cell after every Sunday
+    // Plain separator in notes row for week column
     if (dow === 0) {
       const weekNoteTd = document.createElement('td');
-      weekNoteTd.className = 'week-col-note';
-      if (weeklyReflections[date]) {
-        weekNoteTd.classList.add('has-note');
-        weekNoteTd.title = weeklyReflections[date];
-      }
-      weekNoteTd.addEventListener('click', () => openWeekModal(date));
+      weekNoteTd.className = 'week-col-cell';
       notesTr.appendChild(weekNoteTd);
     }
   }
@@ -482,26 +481,31 @@ function closeDayModal() {
 }
 
 // ---- Week reflection modal ----
-function openWeekModal(sundayDate) {
+function openWeekModal(sundayDate, category) {
   const [y, m, d] = sundayDate.split('-').map(Number);
+  const label = category || 'General';
   document.getElementById('modal-week-title').textContent =
-    `Week of ${MONTH_NAMES[m - 1]} ${d}, ${y}`;
+    `${label} — Week of ${MONTH_NAMES[m - 1]} ${d}, ${y}`;
   document.getElementById('modal-week-reflection').value =
-    state.weeklyReflections[sundayDate] || '';
-  document.getElementById('week-modal').dataset.date = sundayDate;
-  document.getElementById('week-modal').classList.add('open');
+    state.weeklyReflections[`${sundayDate}|${category}`] || '';
+  const modal = document.getElementById('week-modal');
+  modal.dataset.date = sundayDate;
+  modal.dataset.category = category;
+  modal.classList.add('open');
   setTimeout(() => document.getElementById('modal-week-reflection').focus(), 50);
 }
 
 async function saveWeekModal() {
   const modal = document.getElementById('week-modal');
   const date = modal.dataset.date;
+  const category = modal.dataset.category;
+  const key = `${date}|${category}`;
   const reflection = document.getElementById('modal-week-reflection').value;
-  await api('POST', '/api/weekly-reflections', { week_date: date, reflection });
+  await api('POST', '/api/weekly-reflections', { week_date: date, category, reflection });
   if (reflection.trim()) {
-    state.weeklyReflections[date] = reflection;
+    state.weeklyReflections[key] = reflection;
   } else {
-    delete state.weeklyReflections[date];
+    delete state.weeklyReflections[key];
   }
   modal.classList.remove('open');
   renderHeatmap();

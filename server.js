@@ -32,7 +32,23 @@ db.exec(`
 // Migrations
 try { db.exec("ALTER TABLE habits ADD COLUMN category TEXT NOT NULL DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE habits ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0"); } catch(e) {}
-try { db.exec("CREATE TABLE IF NOT EXISTS weekly_reflections (week_date TEXT PRIMARY KEY, reflection TEXT NOT NULL DEFAULT '')"); } catch(e) {}
+// Recreate weekly_reflections with per-category composite key (schema upgrade)
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS weekly_reflections_v2 (
+      week_date  TEXT NOT NULL,
+      category   TEXT NOT NULL DEFAULT '',
+      reflection TEXT NOT NULL DEFAULT '',
+      PRIMARY KEY (week_date, category)
+    );
+    INSERT OR IGNORE INTO weekly_reflections_v2 (week_date, category, reflection)
+      SELECT week_date, '', reflection FROM weekly_reflections WHERE typeof(rowid)='integer';
+    DROP TABLE IF EXISTS weekly_reflections;
+    ALTER TABLE weekly_reflections_v2 RENAME TO weekly_reflections;
+  `);
+} catch(e) {
+  try { db.exec("CREATE TABLE IF NOT EXISTS weekly_reflections (week_date TEXT NOT NULL, category TEXT NOT NULL DEFAULT '', reflection TEXT NOT NULL DEFAULT '', PRIMARY KEY (week_date, category))"); } catch(e2) {}
+}
 
 // Initialize sort_order for habits that still have it at 0
 const _maxOrder = db.prepare("SELECT COALESCE(MAX(sort_order), 0) AS m FROM habits").get().m;
@@ -73,7 +89,7 @@ app.get('/api/month/:year/:month', (req, res) => {
   const end   = `${year}-${month.padStart(2, '0')}-31`;
   const logs               = db.prepare('SELECT habit_id, date FROM logs WHERE date >= ? AND date <= ?').all(start, end);
   const remarks            = db.prepare('SELECT date, remark FROM remarks WHERE date >= ? AND date <= ?').all(start, end);
-  const weeklyReflections  = db.prepare('SELECT week_date, reflection FROM weekly_reflections WHERE week_date >= ? AND week_date <= ?').all(start, end);
+  const weeklyReflections  = db.prepare('SELECT week_date, category, reflection FROM weekly_reflections WHERE week_date >= ? AND week_date <= ?').all(start, end);
   res.json({ logs, remarks, weeklyReflections });
 });
 
@@ -92,10 +108,10 @@ app.post('/api/logs/toggle', (req, res) => {
 
 // --- Weekly reflection ---
 app.post('/api/weekly-reflections', (req, res) => {
-  const { week_date, reflection } = req.body;
+  const { week_date, category = '', reflection } = req.body;
   db.prepare(
-    'INSERT INTO weekly_reflections (week_date, reflection) VALUES (?, ?) ON CONFLICT(week_date) DO UPDATE SET reflection = excluded.reflection'
-  ).run(week_date, reflection ?? '');
+    'INSERT INTO weekly_reflections (week_date, category, reflection) VALUES (?, ?, ?) ON CONFLICT(week_date, category) DO UPDATE SET reflection = excluded.reflection'
+  ).run(week_date, category, reflection ?? '');
   res.json({ success: true });
 });
 
