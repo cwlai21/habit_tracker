@@ -448,8 +448,6 @@ function renderHabitsList() {
     if (!seenCats.has(cat)) { seenCats.add(cat); orderedCats.push(cat); }
   }
 
-  const lastIdx = state.habits.length - 1;
-
   orderedCats.forEach(cat => {
     const color = categoryColor(cat);
     const catHabits = state.habits.filter(h => (h.category || '') === cat);
@@ -462,8 +460,9 @@ function renderHabitsList() {
       list.appendChild(divider);
     }
 
-    catHabits.forEach(habit => {
-      const globalIdx = state.habits.indexOf(habit);
+    catHabits.forEach((habit, catIdx) => {
+      const prevId = catIdx > 0 ? catHabits[catIdx - 1].id : null;
+      const nextId = catIdx < catHabits.length - 1 ? catHabits[catIdx + 1].id : null;
       const hColor    = categoryColor(habit.category);
       const item      = document.createElement('div');
       item.className  = `habit-item${habit.active ? '' : ' inactive'}`;
@@ -471,8 +470,8 @@ function renderHabitsList() {
 
       item.innerHTML =
         `<div class="habit-reorder">` +
-          `<button class="btn-icon btn-reorder" title="Move up" onclick="reorderHabit(${habit.id},'up')" ${globalIdx === 0 ? 'disabled' : ''}>↑</button>` +
-          `<button class="btn-icon btn-reorder" title="Move down" onclick="reorderHabit(${habit.id},'down')" ${globalIdx === lastIdx ? 'disabled' : ''}>↓</button>` +
+          `<button class="btn-icon btn-reorder" title="Move up" onclick="swapHabits(${habit.id},${prevId})" ${!prevId ? 'disabled' : ''}>↑</button>` +
+          `<button class="btn-icon btn-reorder" title="Move down" onclick="swapHabits(${habit.id},${nextId})" ${!nextId ? 'disabled' : ''}>↓</button>` +
         `</div>` +
         `<input class="habit-name-input" type="text" value="${habit.name}" maxlength="60"` +
           ` onblur="saveHabitName(${habit.id}, this.value)"` +
@@ -504,17 +503,19 @@ async function addHabit() {
   renderHabitsList();
 }
 
-async function reorderHabit(id, direction) {
-  const { data: all } = await db.from('habits').select('id').order('sort_order').order('id');
-  const idx = all.findIndex(h => h.id === id);
-  if (idx === -1) return;
-  const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-  if (swapIdx >= 0 && swapIdx < all.length) {
-    [all[idx], all[swapIdx]] = [all[swapIdx], all[idx]];
-    await Promise.all(all.map((h, i) => db.from('habits').update({ sort_order: (i + 1) * 10 }).eq('id', h.id)));
-  }
-  const { data } = await db.from('habits').select('*').order('sort_order').order('id');
-  state.habits = data || [];
+async function swapHabits(id, targetId) {
+  if (!targetId) return;
+  const h1 = state.habits.find(h => h.id === id);
+  const h2 = state.habits.find(h => h.id === targetId);
+  if (!h1 || !h2) return;
+  const s1 = h1.sort_order, s2 = h2.sort_order;
+  await Promise.all([
+    db.from('habits').update({ sort_order: s2 }).eq('id', id),
+    db.from('habits').update({ sort_order: s1 }).eq('id', targetId),
+  ]);
+  h1.sort_order = s2;
+  h2.sort_order = s1;
+  state.habits.sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
   renderHabitsList();
 }
 

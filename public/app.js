@@ -459,8 +459,6 @@ function renderHabitsList() {
     if (!seenCats.has(cat)) { seenCats.add(cat); orderedCats.push(cat); }
   }
 
-  const lastIdx = state.habits.length - 1;
-
   orderedCats.forEach(cat => {
     const color = categoryColor(cat);
     const catHabits = state.habits.filter(h => (h.category || '') === cat);
@@ -478,8 +476,9 @@ function renderHabitsList() {
       list.appendChild(divider);
     }
 
-    catHabits.forEach(habit => {
-      const globalIdx = state.habits.indexOf(habit);
+    catHabits.forEach((habit, catIdx) => {
+      const prevId = catIdx > 0 ? catHabits[catIdx - 1].id : null;
+      const nextId = catIdx < catHabits.length - 1 ? catHabits[catIdx + 1].id : null;
       const hColor = categoryColor(habit.category);
       const item = document.createElement('div');
       item.className = `habit-item${habit.active ? '' : ' inactive'}`;
@@ -487,8 +486,8 @@ function renderHabitsList() {
 
       item.innerHTML =
         `<div class="habit-reorder">` +
-          `<button class="btn-icon btn-reorder" title="Move up" onclick="reorderHabit(${habit.id},'up')" ${globalIdx === 0 ? 'disabled' : ''}>↑</button>` +
-          `<button class="btn-icon btn-reorder" title="Move down" onclick="reorderHabit(${habit.id},'down')" ${globalIdx === lastIdx ? 'disabled' : ''}>↓</button>` +
+          `<button class="btn-icon btn-reorder" title="Move up" onclick="swapHabits(${habit.id},${prevId})" ${!prevId ? 'disabled' : ''}>↑</button>` +
+          `<button class="btn-icon btn-reorder" title="Move down" onclick="swapHabits(${habit.id},${nextId})" ${!nextId ? 'disabled' : ''}>↓</button>` +
         `</div>` +
         `<input class="habit-name-input" type="text" value="${habit.name}" maxlength="60"` +
           ` onblur="saveHabitName(${habit.id}, this.value)"` +
@@ -516,8 +515,9 @@ async function addHabit() {
   renderHabitsList();
 }
 
-async function reorderHabit(id, direction) {
-  await api('POST', '/api/habits/reorder', { id, direction });
+async function swapHabits(id, targetId) {
+  if (!targetId) return;
+  await api('POST', '/api/habits/reorder', { id, targetId });
   state.habits = await api('GET', '/api/habits');
   renderHabitsList();
 }
