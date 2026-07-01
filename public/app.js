@@ -490,7 +490,9 @@ function renderHabitsList() {
           `<button class="btn-icon btn-reorder" title="Move up" onclick="reorderHabit(${habit.id},'up')" ${globalIdx === 0 ? 'disabled' : ''}>↑</button>` +
           `<button class="btn-icon btn-reorder" title="Move down" onclick="reorderHabit(${habit.id},'down')" ${globalIdx === lastIdx ? 'disabled' : ''}>↓</button>` +
         `</div>` +
-        `<span class="habit-item-name" title="${habit.name}">${habit.name}</span>` +
+        `<input class="habit-name-input" type="text" value="${habit.name}" maxlength="60"` +
+          ` onblur="saveHabitName(${habit.id}, this.value)"` +
+          ` onkeydown="if(event.key==='Enter') this.blur()">` +
         `<input class="habit-category-input" type="text" value="${habit.category || ''}" placeholder="Category..."` +
           ` onblur="saveHabitCategory(${habit.id}, this.value)"` +
           ` onkeydown="if(event.key==='Enter') this.blur()">` +
@@ -518,6 +520,19 @@ async function reorderHabit(id, direction) {
   await api('POST', '/api/habits/reorder', { id, direction });
   state.habits = await api('GET', '/api/habits');
   renderHabitsList();
+}
+
+async function saveHabitName(id, name) {
+  const habit = state.habits.find(h => h.id === id);
+  const trimmed = name.trim();
+  if (!habit || !trimmed || habit.name === trimmed) {
+    // Revert input to current name if empty or unchanged
+    if (habit && !trimmed) renderHabitsList();
+    return;
+  }
+  await api('PUT', `/api/habits/${id}`, { name: trimmed });
+  habit.name = trimmed;
+  renderHeatmap();
 }
 
 async function saveHabitCategory(id, category) {

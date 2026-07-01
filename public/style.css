@@ -562,15 +562,21 @@ textarea:focus { outline: none; border-color: var(--primary); background: var(--
 }
 .btn-reorder:disabled { opacity: 0.25; cursor: default; }
 
-.habit-item-name {
+.habit-name-input {
   flex: 1;
+  min-width: 80px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
   font-size: 0.9rem;
   font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 60px;
+  font-family: inherit;
+  color: var(--text);
+  background: transparent;
+  transition: border-color 0.15s, background 0.15s;
 }
+.habit-name-input:hover { border-color: var(--border); background: var(--bg); }
+.habit-name-input:focus { outline: none; border-color: var(--primary); background: var(--surface); }
 
 .habit-category-input {
   width: 110px;
