@@ -108,6 +108,24 @@
     </div>
   </div>
 
+  <!-- Week Reflection Modal -->
+  <div class="modal-backdrop" id="week-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-week-title"></h2>
+        <button class="btn-close" id="btn-close-week">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label" for="modal-week-reflection">Weekly reflection</label>
+        <textarea id="modal-week-reflection" placeholder="How was this week? What went well? What could improve?" rows="7"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="btn-cancel-week">Cancel</button>
+        <button class="btn-primary" id="btn-save-week">Save</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="app.js"></script>

@@ -12,14 +12,15 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ---- State ----
 const state = {
-  habits:    [],
-  logs:      new Set(),
-  prevLogs:  new Set(),
-  remarks:   {},
-  year:      new Date().getFullYear(),
-  month:     new Date().getMonth() + 1,
-  prevYear:  null,
-  prevMonth: null,
+  habits:             [],
+  logs:               new Set(),
+  prevLogs:           new Set(),
+  remarks:            {},
+  weeklyReflections:  {},
+  year:               new Date().getFullYear(),
+  month:              new Date().getMonth() + 1,
+  prevYear:           null,
+  prevMonth:          null,
 };
 
 // ---- Category color palette ----
@@ -59,15 +60,18 @@ async function loadMonth() {
   const pStart = fmtDate(prevYear, prevMonth, 1);
   const pEnd   = fmtDate(prevYear, prevMonth, 31);
 
-  const [logsRes, remarksRes, prevLogsRes] = await Promise.all([
+  const [logsRes, remarksRes, prevLogsRes, weeklyRes] = await Promise.all([
     db.from('logs').select('habit_id, date').gte('date', start).lte('date', end),
     db.from('remarks').select('date, remark').gte('date', start).lte('date', end),
     db.from('logs').select('habit_id, date').gte('date', pStart).lte('date', pEnd),
+    db.from('weekly_reflections').select('week_date, reflection').gte('week_date', start).lte('week_date', end),
   ]);
 
   state.logs = new Set((logsRes.data || []).map(l => `${l.habit_id}-${l.date}`));
   state.remarks = {};
   (remarksRes.data || []).forEach(r => { state.remarks[r.date] = r.remark; });
+  state.weeklyReflections = {};
+  (weeklyRes.data || []).forEach(r => { state.weeklyReflections[r.week_date] = r.reflection; });
   state.prevLogs = new Set((prevLogsRes.data || []).map(l => `${l.habit_id}-${l.date}`));
 }
 
@@ -216,14 +220,26 @@ function renderStatsBar() {
   }
 }
 
+function weekOfYear(year, month, day) {
+  const jan1 = new Date(year, 0, 1);
+  const target = new Date(year, month - 1, day);
+  return Math.ceil(((target - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+}
+
 // ---- Render heatmap ----
 function renderHeatmap() {
-  const { year, month, habits, logs, remarks } = state;
+  const { year, month, habits, logs, remarks, weeklyReflections } = state;
   const days      = daysInMonth(year, month);
   const today     = new Date();
   const isCurMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
   const todayDay  = today.getDate();
   const todayStr  = fmtDate(today.getFullYear(), today.getMonth() + 1, todayDay);
+
+  const sundaySet = new Set();
+  for (let d = 1; d <= days; d++) {
+    if (new Date(year, month - 1, d).getDay() === 0) sundaySet.add(d);
+  }
+  const totalCols = days + sundaySet.size;
 
   document.getElementById('month-display').textContent = `${MONTH_NAMES[month - 1]} ${year}`;
   renderStatsBar();
@@ -258,6 +274,19 @@ function renderHeatmap() {
       (remarks[date] ? '<span class="remark-dot"></span>' : '<span style="display:block;height:6px"></span>');
     if (!isFutureDay) th.addEventListener('click', () => openDayModal(date));
     headerRow.appendChild(th);
+
+    if (dow === 0) {
+      const wn = weekOfYear(year, month, d);
+      const hasRef = !!weeklyReflections[date];
+      const weekTh = document.createElement('th');
+      weekTh.className = 'week-col-header';
+      weekTh.innerHTML =
+        `<span class="day-num">W${wn}</span>` +
+        `<span class="day-abbr"></span>` +
+        (hasRef ? '<span class="remark-dot"></span>' : '<span style="display:block;height:6px"></span>');
+      weekTh.addEventListener('click', () => openWeekModal(date));
+      headerRow.appendChild(weekTh);
+    }
   }
   thead.appendChild(headerRow);
   table.appendChild(thead);
@@ -268,7 +297,7 @@ function renderHeatmap() {
   if (activeHabits.length === 0) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = days + 1;
+    td.colSpan = totalCols + 1;
     td.className = 'empty-state';
     td.textContent = 'No habits yet. Click "Manage Habits" to add some.';
     tr.appendChild(td);
@@ -294,7 +323,7 @@ function renderHeatmap() {
         if (color) { catNameTd.style.background = color.header; catNameTd.style.color = color.label; }
         catTr.appendChild(catNameTd);
         const catSpanTd = document.createElement('td');
-        catSpanTd.colSpan = days;
+        catSpanTd.colSpan = totalCols;
         catSpanTd.className = 'category-header-span';
         if (color) catSpanTd.style.background = color.header;
         catTr.appendChild(catSpanTd);
@@ -333,6 +362,13 @@ function renderHeatmap() {
           if (dow === 0 || dow === 6) td.classList.add('weekend');
           if (!isFuture) td.addEventListener('click', () => toggleLog(habit.id, date, td));
           tr.appendChild(td);
+
+          if (dow === 0) {
+            const weekTd = document.createElement('td');
+            weekTd.className = 'week-col-cell';
+            if (color) weekTd.style.background = color.row;
+            tr.appendChild(weekTd);
+          }
         }
         tbody.appendChild(tr);
       });
@@ -359,6 +395,17 @@ function renderHeatmap() {
     if (dow === 0 || dow === 6) td.classList.add('weekend');
     if (!isFuture) td.addEventListener('click', () => openDayModal(date));
     notesTr.appendChild(td);
+
+    if (dow === 0) {
+      const weekNoteTd = document.createElement('td');
+      weekNoteTd.className = 'week-col-note';
+      if (weeklyReflections[date]) {
+        weekNoteTd.classList.add('has-note');
+        weekNoteTd.title = weeklyReflections[date];
+      }
+      weekNoteTd.addEventListener('click', () => openWeekModal(date));
+      notesTr.appendChild(weekNoteTd);
+    }
   }
   tbody.appendChild(notesTr);
   table.appendChild(tbody);
@@ -426,6 +473,36 @@ async function saveDayModal() {
 
 function closeDayModal() {
   document.getElementById('day-modal').classList.remove('open');
+}
+
+// ---- Week reflection modal ----
+function openWeekModal(sundayDate) {
+  const [y, m, d] = sundayDate.split('-').map(Number);
+  document.getElementById('modal-week-title').textContent =
+    `Week of ${MONTH_NAMES[m - 1]} ${d}, ${y}`;
+  document.getElementById('modal-week-reflection').value =
+    state.weeklyReflections[sundayDate] || '';
+  document.getElementById('week-modal').dataset.date = sundayDate;
+  document.getElementById('week-modal').classList.add('open');
+  setTimeout(() => document.getElementById('modal-week-reflection').focus(), 50);
+}
+
+async function saveWeekModal() {
+  const modal = document.getElementById('week-modal');
+  const date = modal.dataset.date;
+  const reflection = document.getElementById('modal-week-reflection').value;
+  await db.from('weekly_reflections').upsert({ week_date: date, reflection }, { onConflict: 'week_date' });
+  if (reflection.trim()) {
+    state.weeklyReflections[date] = reflection;
+  } else {
+    delete state.weeklyReflections[date];
+  }
+  modal.classList.remove('open');
+  renderHeatmap();
+}
+
+function closeWeekModal() {
+  document.getElementById('week-modal').classList.remove('open');
 }
 
 // ---- Habits modal ----
@@ -671,6 +748,11 @@ async function init() {
   document.getElementById('btn-cancel-day').addEventListener('click', closeDayModal);
   document.getElementById('btn-save-day').addEventListener('click', saveDayModal);
   document.getElementById('modal-remark').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveDayModal(); });
+
+  document.getElementById('btn-close-week').addEventListener('click', closeWeekModal);
+  document.getElementById('btn-cancel-week').addEventListener('click', closeWeekModal);
+  document.getElementById('btn-save-week').addEventListener('click', saveWeekModal);
+  document.getElementById('modal-week-reflection').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveWeekModal(); });
 
   document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
     backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.classList.remove('open'); });
