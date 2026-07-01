@@ -1,9 +1,10 @@
 // ---- State ----
 const state = {
   habits: [],
-  logs: new Set(),      // "habitId-date"
-  prevLogs: new Set(),  // previous month logs
-  remarks: {},          // date -> remark string
+  logs: new Set(),              // "habitId-date"
+  prevLogs: new Set(),          // previous month logs
+  remarks: {},                  // date -> remark string
+  weeklyReflections: {},        // sundayDate -> reflection string
   year: new Date().getFullYear(),
   month: new Date().getMonth() + 1,
   prevYear: null,
@@ -59,8 +60,16 @@ async function loadMonth() {
   state.logs = new Set(cur.logs.map(l => `${l.habit_id}-${l.date}`));
   state.remarks = {};
   cur.remarks.forEach(r => { state.remarks[r.date] = r.remark; });
+  state.weeklyReflections = {};
+  cur.weeklyReflections.forEach(r => { state.weeklyReflections[r.week_date] = r.reflection; });
 
   state.prevLogs = new Set(prev.logs.map(l => `${l.habit_id}-${l.date}`));
+}
+
+function weekOfYear(year, month, day) {
+  const jan1 = new Date(year, 0, 1);
+  const target = new Date(year, month - 1, day);
+  return Math.ceil(((target - jan1) / 86400000 + jan1.getDay() + 1) / 7);
 }
 
 // ---- Stats helpers ----
@@ -215,11 +224,18 @@ function renderStatsBar() {
 
 // ---- Render heatmap ----
 function renderHeatmap() {
-  const { year, month, habits, logs, remarks } = state;
+  const { year, month, habits, logs, remarks, weeklyReflections } = state;
   const days = daysInMonth(year, month);
   const today = new Date();
   const isCurMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
   const todayDay = today.getDate();
+
+  // Precompute which days are Sundays (for week reflection columns)
+  const sundaySet = new Set();
+  for (let d = 1; d <= days; d++) {
+    if (new Date(year, month - 1, d).getDay() === 0) sundaySet.add(d);
+  }
+  const totalCols = days + sundaySet.size;
 
   document.getElementById('month-display').textContent = `${MONTH_NAMES[month - 1]} ${year}`;
   renderStatsBar();
@@ -254,6 +270,20 @@ function renderHeatmap() {
 
     th.addEventListener('click', () => openDayModal(date));
     headerRow.appendChild(th);
+
+    // Week reflection column after every Sunday
+    if (dow === 0) {
+      const wn = weekOfYear(year, month, d);
+      const hasRef = !!weeklyReflections[date];
+      const weekTh = document.createElement('th');
+      weekTh.className = 'week-col-header';
+      weekTh.innerHTML =
+        `<span class="day-num">W${wn}</span>` +
+        `<span class="day-abbr"></span>` +
+        (hasRef ? '<span class="remark-dot"></span>' : '<span style="display:block;height:6px"></span>');
+      weekTh.addEventListener('click', () => openWeekModal(date));
+      headerRow.appendChild(weekTh);
+    }
   }
   thead.appendChild(headerRow);
   table.appendChild(thead);
@@ -264,7 +294,7 @@ function renderHeatmap() {
   if (activeHabits.length === 0) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = days + 1;
+    td.colSpan = totalCols + 1;
     td.className = 'empty-state';
     td.textContent = 'No habits yet. Click "Manage Habits" to add some.';
     tr.appendChild(td);
@@ -294,7 +324,7 @@ function renderHeatmap() {
         catTr.appendChild(catNameTd);
 
         const catSpanTd = document.createElement('td');
-        catSpanTd.colSpan = days;
+        catSpanTd.colSpan = totalCols;
         catSpanTd.className = 'category-header-span';
         if (color) catSpanTd.style.background = color.header;
         catTr.appendChild(catSpanTd);
@@ -336,6 +366,14 @@ function renderHeatmap() {
 
           td.addEventListener('click', () => toggleLog(habit.id, date, td));
           tr.appendChild(td);
+
+          // Week separator cell after every Sunday
+          if (dow === 0) {
+            const weekTd = document.createElement('td');
+            weekTd.className = 'week-col-cell';
+            if (color) weekTd.style.background = color.row;
+            tr.appendChild(weekTd);
+          }
         }
 
         tbody.appendChild(tr);
@@ -366,6 +404,18 @@ function renderHeatmap() {
 
     td.addEventListener('click', () => openDayModal(date));
     notesTr.appendChild(td);
+
+    // Weekly reflection note cell after every Sunday
+    if (dow === 0) {
+      const weekNoteTd = document.createElement('td');
+      weekNoteTd.className = 'week-col-note';
+      if (weeklyReflections[date]) {
+        weekNoteTd.classList.add('has-note');
+        weekNoteTd.title = weeklyReflections[date];
+      }
+      weekNoteTd.addEventListener('click', () => openWeekModal(date));
+      notesTr.appendChild(weekNoteTd);
+    }
   }
 
   tbody.appendChild(notesTr);
@@ -429,6 +479,36 @@ async function saveDayModal() {
 
 function closeDayModal() {
   document.getElementById('day-modal').classList.remove('open');
+}
+
+// ---- Week reflection modal ----
+function openWeekModal(sundayDate) {
+  const [y, m, d] = sundayDate.split('-').map(Number);
+  document.getElementById('modal-week-title').textContent =
+    `Week of ${MONTH_NAMES[m - 1]} ${d}, ${y}`;
+  document.getElementById('modal-week-reflection').value =
+    state.weeklyReflections[sundayDate] || '';
+  document.getElementById('week-modal').dataset.date = sundayDate;
+  document.getElementById('week-modal').classList.add('open');
+  setTimeout(() => document.getElementById('modal-week-reflection').focus(), 50);
+}
+
+async function saveWeekModal() {
+  const modal = document.getElementById('week-modal');
+  const date = modal.dataset.date;
+  const reflection = document.getElementById('modal-week-reflection').value;
+  await api('POST', '/api/weekly-reflections', { week_date: date, reflection });
+  if (reflection.trim()) {
+    state.weeklyReflections[date] = reflection;
+  } else {
+    delete state.weeklyReflections[date];
+  }
+  modal.classList.remove('open');
+  renderHeatmap();
+}
+
+function closeWeekModal() {
+  document.getElementById('week-modal').classList.remove('open');
 }
 
 // ---- Habits modal ----
@@ -598,6 +678,13 @@ async function init() {
   document.getElementById('btn-save-day').addEventListener('click', saveDayModal);
   document.getElementById('modal-remark').addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveDayModal();
+  });
+
+  document.getElementById('btn-close-week').addEventListener('click', closeWeekModal);
+  document.getElementById('btn-cancel-week').addEventListener('click', closeWeekModal);
+  document.getElementById('btn-save-week').addEventListener('click', saveWeekModal);
+  document.getElementById('modal-week-reflection').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveWeekModal();
   });
 
   document.querySelectorAll('.modal-backdrop').forEach(backdrop => {

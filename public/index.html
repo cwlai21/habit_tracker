@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Habit Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-left">
+      <span class="app-title">Habit Tracker</span>
+    </div>
+    <div class="month-nav">
+      <button class="btn-nav" id="btn-prev" title="Previous month">&#8592;</button>
+      <span id="month-display" class="month-label"></span>
+      <button class="btn-nav" id="btn-next" title="Next month">&#8594;</button>
+    </div>
+    <div class="header-right">
+      <button class="btn-primary" id="btn-manage-habits">Manage Habits</button>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main>
+    <div id="stats-bar"></div>
+    <div class="heatmap-wrapper">
+      <div class="heatmap-scroll">
+        <table id="heatmap-table"></table>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span class="legend-cell done"></span> Done
+      <span class="legend-cell"></span> Not done
+      <span class="legend-dot"></span> Has note
+    </div>
+  </main>
+
+  <!-- Day Modal -->
+  <div class="modal-backdrop" id="day-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-date-title"></h2>
+        <button class="btn-close" id="btn-close-day">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label" for="modal-remark">Daily note</label>
+        <textarea id="modal-remark" placeholder="How did today go? Any thoughts..." rows="5"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="btn-cancel-day">Cancel</button>
+        <button class="btn-primary" id="btn-save-day">Save note</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Habits Modal -->
+  <div class="modal-backdrop" id="habits-modal">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h2>Manage Habits</h2>
+        <button class="btn-close" id="btn-close-habits">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-hint">Active habits appear in the tracker. Deactivated habits are hidden but their history is kept.</p>
+        <div id="habits-list"></div>
+        <div class="add-habit-row">
+          <input type="text" id="new-habit-input" placeholder="New habit name..." maxlength="60" />
+          <button class="btn-primary" id="btn-add-habit">Add</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" id="btn-close-habits-footer">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Week Reflection Modal -->
+  <div class="modal-backdrop" id="week-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-week-title"></h2>
+        <button class="btn-close" id="btn-close-week">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label" for="modal-week-reflection">Weekly reflection</label>
+        <textarea id="modal-week-reflection" placeholder="How was this week? What went well? What could improve?" rows="7"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="btn-cancel-week">Cancel</button>
+        <button class="btn-primary" id="btn-save-week">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -32,6 +32,7 @@ db.exec(`
 // Migrations
 try { db.exec("ALTER TABLE habits ADD COLUMN category TEXT NOT NULL DEFAULT ''"); } catch(e) {}
 try { db.exec("ALTER TABLE habits ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0"); } catch(e) {}
+try { db.exec("CREATE TABLE IF NOT EXISTS weekly_reflections (week_date TEXT PRIMARY KEY, reflection TEXT NOT NULL DEFAULT '')"); } catch(e) {}
 
 // Initialize sort_order for habits that still have it at 0
 const _maxOrder = db.prepare("SELECT COALESCE(MAX(sort_order), 0) AS m FROM habits").get().m;
@@ -70,9 +71,10 @@ app.get('/api/month/:year/:month', (req, res) => {
   const { year, month } = req.params;
   const start = `${year}-${month.padStart(2, '0')}-01`;
   const end   = `${year}-${month.padStart(2, '0')}-31`;
-  const logs    = db.prepare('SELECT habit_id, date FROM logs WHERE date >= ? AND date <= ?').all(start, end);
-  const remarks = db.prepare('SELECT date, remark FROM remarks WHERE date >= ? AND date <= ?').all(start, end);
-  res.json({ logs, remarks });
+  const logs               = db.prepare('SELECT habit_id, date FROM logs WHERE date >= ? AND date <= ?').all(start, end);
+  const remarks            = db.prepare('SELECT date, remark FROM remarks WHERE date >= ? AND date <= ?').all(start, end);
+  const weeklyReflections  = db.prepare('SELECT week_date, reflection FROM weekly_reflections WHERE week_date >= ? AND week_date <= ?').all(start, end);
+  res.json({ logs, remarks, weeklyReflections });
 });
 
 // --- Toggle log ---
@@ -86,6 +88,15 @@ app.post('/api/logs/toggle', (req, res) => {
     db.prepare('INSERT INTO logs (habit_id, date) VALUES (?, ?)').run(habit_id, date);
     res.json({ done: true });
   }
+});
+
+// --- Weekly reflection ---
+app.post('/api/weekly-reflections', (req, res) => {
+  const { week_date, reflection } = req.body;
+  db.prepare(
+    'INSERT INTO weekly_reflections (week_date, reflection) VALUES (?, ?) ON CONFLICT(week_date) DO UPDATE SET reflection = excluded.reflection'
+  ).run(week_date, reflection ?? '');
+  res.json({ success: true });
 });
 
 // --- Reorder habits ---

@@ -416,6 +416,59 @@ tbody tr:hover td.log-cell.today { background: var(--today-col); }
   background: var(--surface) !important;
 }
 
+/* ---- Week reflection column ---- */
+:root { --week-col-bg: #f1f5f9; --week-col-hover: #e2e8f0; }
+
+th.week-col-header {
+  width: var(--cell-size);
+  min-width: var(--cell-size);
+  padding: 0.5rem 0;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+  border-left: 2px solid var(--border);
+  vertical-align: bottom;
+  background: var(--week-col-bg);
+  transition: background 0.12s;
+}
+th.week-col-header:hover { background: var(--week-col-hover); }
+th.week-col-header .day-num { color: var(--text-muted); font-size: 0.72rem; }
+th.week-col-header .remark-dot { background: #7c3aed; }
+
+td.week-col-cell {
+  width: var(--cell-size);
+  min-width: var(--cell-size);
+  background: var(--week-col-bg);
+  border-left: 2px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.notes-row td.week-col-note {
+  width: var(--cell-size);
+  min-width: var(--cell-size);
+  height: 28px;
+  cursor: pointer;
+  text-align: center;
+  vertical-align: middle;
+  background: var(--week-col-bg);
+  border-left: 2px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+}
+.notes-row td.week-col-note:hover { background: var(--week-col-hover); }
+.notes-row td.week-col-note.has-note::after {
+  content: '✎';
+  color: #7c3aed;
+  font-size: 0.8rem;
+}
+.notes-row td.week-col-note:not(.has-note):hover::after {
+  content: '+';
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1;
+}
+
 /* Legend */
 .legend {
   display: flex;
