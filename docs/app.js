@@ -475,29 +475,39 @@ function closeDayModal() {
 }
 
 // ---- Week reflection modal ----
-function openWeekModal(sundayDate) {
+function openWeekModal(sundayDate, category) {
   const [y, m, d] = sundayDate.split('-').map(Number);
+  const catLabel = category ? `${category} — ` : '';
   document.getElementById('modal-week-title').textContent =
-    `Week of ${MONTH_NAMES[m - 1]} ${d}, ${y}`;
+    `${catLabel}Week of ${MONTH_NAMES[m - 1]} ${d}, ${y}`;
+  const key = `${sundayDate}|${category || ''}`;
   document.getElementById('modal-week-reflection').value =
-    state.weeklyReflections[sundayDate] || '';
-  document.getElementById('week-modal').dataset.date = sundayDate;
-  document.getElementById('week-modal').classList.add('open');
+    state.weeklyReflections[key] || '';
+  const modal = document.getElementById('week-modal');
+  modal.dataset.date = sundayDate;
+  modal.dataset.category = category || '';
+  modal.classList.add('open');
   setTimeout(() => document.getElementById('modal-week-reflection').focus(), 50);
 }
 
 async function saveWeekModal() {
   const modal = document.getElementById('week-modal');
   const date = modal.dataset.date;
+  const category = modal.dataset.category || '';
   const reflection = document.getElementById('modal-week-reflection').value;
-  await db.from('weekly_reflections').upsert({ week_date: date, reflection }, { onConflict: 'week_date' });
+  await db.from('weekly_reflections').upsert(
+    { week_date: date, category, reflection },
+    { onConflict: 'week_date,category' }
+  );
+  const key = `${date}|${category}`;
   if (reflection.trim()) {
-    state.weeklyReflections[date] = reflection;
+    state.weeklyReflections[key] = reflection;
   } else {
-    delete state.weeklyReflections[date];
+    delete state.weeklyReflections[key];
   }
   modal.classList.remove('open');
   renderHeatmap();
+  if (document.getElementById('notes-panel').style.display !== 'none') renderNotesPanel();
 }
 
 function closeWeekModal() {
