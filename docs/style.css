@@ -750,6 +750,7 @@ input[type="text"]:focus { outline: none; border-color: var(--primary); backgrou
   line-height: 1.55;
   white-space: pre-wrap;
 }
+.note-entry-week { color: #7c3aed; }
 .notes-empty {
   padding: 2rem;
   text-align: center;

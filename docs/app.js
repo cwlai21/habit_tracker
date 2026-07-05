@@ -680,27 +680,57 @@ function lockNotes() {
 }
 
 function renderNotesPanel() {
-  const { year, month, remarks } = state;
+  const { year, month, remarks, weeklyReflections } = state;
   document.getElementById('notes-panel-title').textContent =
     `${MONTH_NAMES[month - 1]} ${year} — Notes`;
 
-  const entries = Object.entries(remarks)
+  const remarkEntries = Object.entries(remarks)
     .filter(([, r]) => r.trim())
-    .sort(([a], [b]) => b.localeCompare(a)); // descending by date
+    .map(([date, text]) => ({ sortKey: date, type: 'remark', date, text }));
+
+  // Group weekly reflections by week_date
+  const weekMap = {};
+  Object.entries(weeklyReflections).forEach(([key, reflection]) => {
+    if (!reflection.trim()) return;
+    const [week_date, category] = key.split('|');
+    if (!weekMap[week_date]) weekMap[week_date] = [];
+    weekMap[week_date].push({ category, reflection });
+  });
+  const weekEntries = Object.entries(weekMap).map(([date, cats]) => ({
+    sortKey: date + '~', // '~' sorts after digits so week entries appear just above same-date daily notes
+    type: 'week', date, cats
+  }));
+
+  const allEntries = [...remarkEntries, ...weekEntries]
+    .sort((a, b) => b.sortKey.localeCompare(a.sortKey));
 
   const list = document.getElementById('notes-panel-list');
-  if (entries.length === 0) {
+  if (allEntries.length === 0) {
     list.innerHTML = '<div class="notes-empty">No notes recorded this month.</div>';
     return;
   }
-  list.innerHTML = entries.map(([date, remark]) => {
-    const d = new Date(date + 'T00:00:00');
-    const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    const safe  = remark.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    return `<div class="note-entry">
-      <div class="note-entry-date">${label}</div>
-      <div class="note-entry-text">${safe}</div>
-    </div>`;
+  list.innerHTML = allEntries.map(entry => {
+    if (entry.type === 'remark') {
+      const d = new Date(entry.date + 'T00:00:00');
+      const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const safe = entry.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return `<div class="note-entry">
+        <div class="note-entry-date">${label}</div>
+        <div class="note-entry-text">${safe}</div>
+      </div>`;
+    } else {
+      const [, m, d] = entry.date.split('-').map(Number);
+      const label = `Week of ${MONTH_NAMES[m - 1]} ${d}`;
+      const catsHtml = entry.cats.map(({ category, reflection }) => {
+        const safe = reflection.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const prefix = category ? `<strong>${category}:</strong> ` : '';
+        return `<div class="note-entry-text">${prefix}${safe}</div>`;
+      }).join('');
+      return `<div class="note-entry">
+        <div class="note-entry-date note-entry-week">${label}</div>
+        ${catsHtml}
+      </div>`;
+    }
   }).join('');
 }
 
