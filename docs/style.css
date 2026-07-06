@@ -751,6 +751,24 @@ input[type="text"]:focus { outline: none; border-color: var(--primary); backgrou
   white-space: pre-wrap;
 }
 .note-entry-week { color: #7c3aed; }
+
+/* Weekly reflection category columns */
+.note-week-cats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.6rem;
+  align-items: start;
+}
+.note-week-cat {
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface-alt, #f8fafc);
+}
+.note-week-cat-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
 .notes-empty {
   padding: 2rem;
   text-align: center;
@@ -774,4 +792,5 @@ input[type="text"]:focus { outline: none; border-color: var(--primary); backgrou
   main { padding: 1rem 0.75rem; }
   :root { --name-col-width: 120px; --cell-size: 28px; --header-h: 52px; }
   .note-entry { grid-template-columns: 1fr; gap: 0.25rem; }
+  .note-week-cats { grid-template-columns: 1fr; }
 }

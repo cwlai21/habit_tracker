@@ -731,14 +731,27 @@ function renderNotesPanel() {
     } else {
       const [, m, d] = entry.date.split('-').map(Number);
       const label = `Week of ${MONTH_NAMES[m - 1]} ${d}`;
+      // Order categories as they appear in the heatmap table
+      const catOrder = [];
+      state.habits.forEach(h => {
+        const c = h.category || '';
+        if (!catOrder.includes(c)) catOrder.push(c);
+      });
+      entry.cats.sort((a, b) => catOrder.indexOf(a.category) - catOrder.indexOf(b.category));
       const catsHtml = entry.cats.map(({ category, reflection }) => {
         const safe = reflection.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        const prefix = category ? `<strong>${category}:</strong> ` : '';
-        return `<div class="note-entry-text">${prefix}${safe}</div>`;
+        const safeCat = (category || 'General').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const color = categoryColor(category);
+        const cardStyle = color ? ` style="background:${color.header}"` : '';
+        const nameStyle = color ? ` style="color:${color.label}"` : '';
+        return `<div class="note-week-cat"${cardStyle}>
+          <div class="note-week-cat-name"${nameStyle}>${safeCat}</div>
+          <div class="note-entry-text">${safe}</div>
+        </div>`;
       }).join('');
       return `<div class="note-entry">
         <div class="note-entry-date note-entry-week">${label}</div>
-        ${catsHtml}
+        <div class="note-week-cats">${catsHtml}</div>
       </div>`;
     }
   }).join('');
