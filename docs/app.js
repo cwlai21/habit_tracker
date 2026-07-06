@@ -64,7 +64,7 @@ async function loadMonth() {
     db.from('logs').select('habit_id, date').gte('date', start).lte('date', end),
     db.from('remarks').select('date, remark').gte('date', start).lte('date', end),
     db.from('logs').select('habit_id, date').gte('date', pStart).lte('date', pEnd),
-    db.from('weekly_reflections').select('week_date, reflection').gte('week_date', start).lte('week_date', end),
+    db.from('weekly_reflections').select('week_date, category, reflection').gte('week_date', start).lte('week_date', end),
   ]);
 
   state.logs = new Set((logsRes.data || []).map(l => `${l.habit_id}-${l.date}`));
@@ -495,10 +495,15 @@ async function saveWeekModal() {
   const date = modal.dataset.date;
   const category = modal.dataset.category || '';
   const reflection = document.getElementById('modal-week-reflection').value;
-  await db.from('weekly_reflections').upsert(
+  const { error } = await db.from('weekly_reflections').upsert(
     { week_date: date, category, reflection },
     { onConflict: 'week_date,category' }
   );
+  if (error) {
+    console.error('saveWeekModal:', error);
+    alert('Failed to save reflection: ' + error.message);
+    return;
+  }
   const key = `${date}|${category}`;
   if (reflection.trim()) {
     state.weeklyReflections[key] = reflection;

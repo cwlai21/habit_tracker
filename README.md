@@ -57,9 +57,17 @@ create table if not exists remarks (
   remark text not null default ''
 );
 
+create table if not exists weekly_reflections (
+  week_date text not null,
+  category text not null default '',
+  reflection text not null default '',
+  primary key (week_date, category)
+);
+
 alter table habits disable row level security;
 alter table logs    disable row level security;
 alter table remarks disable row level security;
+alter table weekly_reflections disable row level security;
 ```
 
 ### 3. Configure credentials
