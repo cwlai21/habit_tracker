@@ -369,8 +369,9 @@ function renderHeatmap() {
             weekTd.rowSpan = catHabits.length;
             weekTd.className = 'cat-week-cell';
             if (hasRef) weekTd.classList.add('has-note');
+            if (isFuture) weekTd.classList.add('future');
             if (color) weekTd.style.background = color.row;
-            weekTd.addEventListener('click', () => openWeekModal(date, cat));
+            if (!isFuture) weekTd.addEventListener('click', () => openWeekModal(date, cat));
             tr.appendChild(weekTd);
           }
         }

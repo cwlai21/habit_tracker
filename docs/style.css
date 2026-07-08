@@ -471,9 +471,10 @@ td.cat-week-cell {
   border-bottom: 1px solid var(--border);
   transition: filter 0.12s;
 }
-td.cat-week-cell:hover { filter: brightness(0.92); }
+td.cat-week-cell:not(.future):hover { filter: brightness(0.92); }
 td.cat-week-cell.has-note::after { content: '✎'; color: #7c3aed; font-size: 0.85rem; }
-td.cat-week-cell:not(.has-note):hover::after { content: '+'; color: var(--text-muted); font-size: 1rem; line-height: 1; }
+td.cat-week-cell:not(.has-note):not(.future):hover::after { content: '+'; color: var(--text-muted); font-size: 1rem; line-height: 1; }
+td.cat-week-cell.future { opacity: 0.35; cursor: not-allowed; }
 
 /* Legend */
 .legend {
